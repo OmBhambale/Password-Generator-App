@@ -1,98 +1,126 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Clipboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors } from '../theme'; // Using your Trust & Professional palette
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function QuickCrypt() {
+  const [password, setPassword] = useState('********');
+  const insets = useSafeAreaInsets();
 
-export default function HomeScreen() {
+  const generatePassword = () => {
+    const passwordLength = 12; // Standard professional length
+    const lowerCaseChars = "abcdefghijklmnopqrstuvwxyz";
+    const upperCaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const numbers = "0123456789";
+    const symbols = "!@#$%^&*()_+~`|}{[]:;?><,./-=";
+
+    // Combine everything for maximum security
+    const allowedChars = lowerCaseChars + upperCaseChars + numbers + symbols;
+    
+    let newPassword = "";
+    for (let i = 0; i < passwordLength; i++) {
+      const randomIndex = Math.floor(Math.random() * allowedChars.length);
+      newPassword += allowedChars[randomIndex];
+    }
+
+    setPassword(newPassword);
+  };
+
+  const copyToClipboard = () => {
+    if (password === '********') return;
+    Clipboard.setString(password);
+    Alert.alert("Copied!", "Password saved to clipboard.");
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <Text style={styles.title}>QuickCrypt</Text>
+      
+      <View style={styles.card} className='mt-4'>
+        <Text style={styles.label}>Your Secure Key</Text>
+        <TouchableOpacity onPress={copyToClipboard} activeOpacity={0.7}>
+          <View style={styles.passwordContainer}>
+            <Text style={styles.passwordDisplay}>{password}</Text>
+          </View>
+          <Text style={styles.label} className='mt-4'>Tap password to copy</Text>
+        </TouchableOpacity>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <TouchableOpacity style={styles.button} onPress={generatePassword}>
+        <Text style={styles.buttonText}>GENERATE PASSWORD</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
+// ... styles remain the same as previous Trust & Professional version
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
     alignItems: 'center',
-    gap: 8,
+    paddingHorizontal: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: Colors.primary,
+    marginTop: 40,
+    letterSpacing: -1,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    fontSize: 14,
+    color: Colors.accent,
+    marginBottom: 50,
   },
+  card: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    padding: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    // Professional shadow
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 4,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.accent,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  passwordContainer: {
+    backgroundColor: '#F1F4F6',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  passwordDisplay: {
+    fontSize: 22,
+    fontFamily: 'monospace',
+    color: Colors.primary,
+    letterSpacing: 2,
+  },
+  button: {
+    width: '100%',
+    marginTop: 'auto', // Pushes button to the bottom area
+    marginBottom: 20,
+    backgroundColor: Colors.primary,
+    paddingVertical: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
+  }
 });
