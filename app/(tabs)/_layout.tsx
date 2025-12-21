@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router'
 import React from 'react'
-import { Colors } from '../theme'
+import { Colors } from '../../lib/theme'
 
 const _layouts = () => {
   return (

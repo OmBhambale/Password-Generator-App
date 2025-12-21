@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { Colors } from './theme';
+import { Colors } from '../lib/theme';
 
 export default function AuthScreen() {
   const [email, setEmail] = useState('');

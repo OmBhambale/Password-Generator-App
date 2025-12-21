@@ -1,23 +1,29 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { copyToClipboard } from '../../lib/clipboard';
+import { getItem, setItem } from '../../lib/secureStore';
 import { supabase } from '../../lib/supabase';
-import { Colors } from '../theme';
+import { testServerVault } from '../../lib/sync';
+import { Colors } from '../../lib/theme';
 
 interface SettingItemProps {
   icon: keyof typeof import('@expo/vector-icons/Feather').default.glyphMap;
   title: string;
   color?: string;
+  onPress?: () => void;
 }
 export default function Profile() {
   const insets = useSafeAreaInsets();
@@ -28,6 +34,9 @@ export default function Profile() {
   // User Data State
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importKey, setImportKey] = useState('');
+  const [showSyncOptions, setShowSyncOptions] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -95,8 +104,8 @@ export default function Profile() {
     }
   };
 
-  const SettingItem = ({ icon, title, color = Colors.primary }: SettingItemProps) => (
-  <TouchableOpacity style={styles.item} activeOpacity={0.7}>
+  const SettingItem = ({ icon, title, color = Colors.primary, onPress }: SettingItemProps) => (
+  <TouchableOpacity style={styles.item} activeOpacity={0.7} onPress={onPress}>
     <View style={styles.itemLeft}>
       <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
         <Feather name={icon} size={20} color={color} />
@@ -106,6 +115,61 @@ export default function Profile() {
     <Feather name="chevron-right" size={20} color={Colors.accent} />
   </TouchableOpacity>
 );
+
+  const verifyServerVault = async () => {
+    try {
+      const masterKey = await getItem('master_key');
+      if (!masterKey) return Alert.alert('No Master Key', 'No local master key found. Export/import a key first.');
+      const { total, success, fail } = await testServerVault(masterKey);
+      Alert.alert('Server Vault Check', `${success} / ${total} entries decryptable. ${fail} failed.`);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Unknown error');
+    }
+  };
+
+  const exportMasterKey = async () => {
+    try {
+      const masterKey = await getItem('master_key');
+      if (!masterKey) return Alert.alert('No Master Key', 'No local master key found to export.');
+
+      // copy to clipboard (web and native)
+      try {
+        await copyToClipboard(masterKey);
+      } catch (_) {
+        // ignore
+      }
+
+      Alert.alert('Exported', 'Master key copied to clipboard. Paste it on your other device to import.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not export key');
+    }
+  };
+
+  const confirmImportKey = async () => {
+    if (!importKey.trim()) return Alert.alert('Invalid', 'Paste a valid master key to import.');
+    try {
+      await setItem('master_key', importKey.trim());
+      setShowImportModal(false);
+      setImportKey('');
+      Alert.alert('Imported', 'Master key saved. Run "Verify Server Vault" to check compatibility.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to save key');
+    }
+  };
+
+  const onSyncPress = () => {
+    if (Platform.OS === 'web') {
+      setShowSyncOptions(true);
+      return;
+    }
+
+    Alert.alert('Sync Vault', 'Choose an action', [
+      { text: 'Verify Server Vault', onPress: verifyServerVault },
+      { text: 'Export Master Key', onPress: exportMasterKey },
+      { text: 'Import Master Key', onPress: () => setShowImportModal(true) },
+      { text: 'Cancel', style: 'cancel' }
+    ]);
+  };
 
   if (loading) {
     return (
@@ -161,9 +225,52 @@ export default function Profile() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>App Settings</Text>
-          <SettingItem icon="database" title="Sync Vault Data" />
+          <SettingItem icon="database" title="Sync Vault Data" onPress={onSyncPress} />
           <SettingItem icon="info" title="QuickCrypt v1.0.0" />
         </View>
+
+        <Modal visible={showImportModal} transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ width: '85%', backgroundColor: '#FFF', padding: 20, borderRadius: 12 }}>
+              <Text style={{ fontWeight: '700', fontSize: 16, marginBottom: 10 }}>Import Master Key</Text>
+              <TextInput
+                value={importKey}
+                onChangeText={setImportKey}
+                placeholder="Paste master key here"
+                style={{ borderWidth: 1, borderColor: '#EEE', padding: 10, borderRadius: 8, marginBottom: 12 }}
+                multiline
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                <TouchableOpacity onPress={() => setShowImportModal(false)} style={{ marginRight: 12 }}>
+                  <Text style={{ color: Colors.accent }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={confirmImportKey}>
+                  <Text style={{ color: Colors.primary, fontWeight: '700' }}>Import</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal visible={showSyncOptions} transparent animationType="fade">
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ width: '85%', backgroundColor: '#FFF', padding: 18, borderRadius: 12 }}>
+              <Text style={{ fontWeight: '700', fontSize: 16, marginBottom: 12 }}>Sync Vault</Text>
+              <TouchableOpacity style={{ paddingVertical: 12 }} onPress={async () => { setShowSyncOptions(false); await verifyServerVault(); }}>
+                <Text style={{ color: Colors.primary }}>Verify Server Vault</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ paddingVertical: 12 }} onPress={async () => { setShowSyncOptions(false); await exportMasterKey(); }}>
+                <Text style={{ color: Colors.primary }}>Export Master Key</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ paddingVertical: 12 }} onPress={() => { setShowSyncOptions(false); setShowImportModal(true); }}>
+                <Text style={{ color: Colors.primary }}>Import Master Key</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ paddingVertical: 12 }} onPress={() => setShowSyncOptions(false)}>
+                <Text style={{ color: Colors.accent }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* --- Logout Section --- */}
         <TouchableOpacity 

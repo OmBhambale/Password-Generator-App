@@ -1,10 +1,11 @@
 import * as CryptoES from 'crypto-es';
-import * as SecureStore from 'expo-secure-store';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Clipboard, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { copyToClipboard } from '../../lib/clipboard';
+import { getItem } from '../../lib/secureStore';
 import { supabase } from '../../lib/supabase';
-import { Colors } from '../theme';
+import { Colors } from '../../lib/theme';
 
 export default function QuickCrypt() {
   const [password, setPassword] = useState('********');
@@ -27,7 +28,7 @@ export default function QuickCrypt() {
     setIsSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const masterKey = await SecureStore.getItemAsync('master_key');
+      const masterKey = await getItem('master_key');
       
       if (!masterKey) throw new Error("Key error");
 
@@ -56,7 +57,7 @@ export default function QuickCrypt() {
       <Text style={styles.title}>QuickCrypt</Text>
       <View style={styles.card}>
         <Text style={styles.label}>Generated Key</Text>
-        <TouchableOpacity onPress={() => password !== '********' && Clipboard.setString(password)}>
+        <TouchableOpacity onPress={() => password !== '********' && copyToClipboard(password)}>
           <View style={styles.passwordContainer}>
             <Text style={styles.passwordDisplay}>{password}</Text>
           </View>

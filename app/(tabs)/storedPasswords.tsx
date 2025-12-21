@@ -1,11 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import * as CryptoES from 'crypto-es';
-import * as SecureStore from 'expo-secure-store';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getItem } from '../../lib/secureStore';
 import { supabase } from '../../lib/supabase';
-import { Colors } from '../theme';
+import { Colors } from '../../lib/theme';
 
 interface PasswordItem {
   id: string;
@@ -32,7 +32,7 @@ export default function StoredPasswords() {
       const { data, error } = await supabase.from('passwords').select('*');
       if (error) throw error;
 
-      const masterKey = await SecureStore.getItemAsync('master_key');
+      const masterKey = await getItem('master_key');
       if (!masterKey) throw new Error("Encryption key missing");
 
       const decrypted = (data || []).map((item: any) => {
